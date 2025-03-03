@@ -9,7 +9,6 @@ from selenium.webdriver.support.ui import WebDriverWait  # 必要なインポー
 from selenium.webdriver.support import expected_conditions as EC  # 必要なインポート
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
 # スプレッドシートを開く（デフォルトで2番目のシートを開く）
 worksheet = open_worksheet()
 
@@ -23,30 +22,20 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
 # 一度に全てのデータを取得
 all_data = worksheet.get_all_values()
 
-# E列（5列目）とH列（7列目）のURLを取得
-urls_e = [row[4] for row in all_data[3:]]  # E列（5列目）のURL
-urls_h = [row[7] for row in all_data[3:]]  # H列（7列目）のURL
+# E列（4列目）のURLを取得
+urls_h = [row[4] for row in all_data[3:]]  # E列（4列目）のURL
 
-# 金額を取得する関数
-def get_price(url, row, column):
+# メルカリの金額を取得する関数
+def get_mercari_price(url, row, column):
     try:
         # 対象のURLにアクセス
         driver.get(url)
         
-        # AmazonとMercariのURLで金額取得用のクラス名が異なるので分岐
-        if 'amazon' in url:
-            # Amazonの金額を取得（動的待機）
-            price_element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//span[@class='a-price-whole']"))
-            )
-        elif 'mercari' in url:
-            # Mercariの金額を取得（動的待機）
-            price_element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//span[@class='number__6b270ca7']"))
-            )
-        else:
-            return f"対応するURLの形式ではないURLです (URL: {url})"
-
+        # メルカリの金額を取得（動的待機）
+        price_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//span[@class='number__6b270ca7']"))
+        )
+        
         first_price = int(price_element.text.replace('¥', '').replace(',', ''))
         
         # 指定された列に金額を入力
@@ -56,20 +45,9 @@ def get_price(url, row, column):
     except Exception as e:
         return f"エラーが発生しました (URL: {url}): {str(e)}"
 
-
-# 並列処理でE列のURLを処理
-with ThreadPoolExecutor(max_workers=10) as executor:  # 10スレッドで並列処理
-    future_to_url_e = {executor.submit(get_price, url, row, 6): (url, row) for row, url in enumerate(urls_e, start=4)}
-    
-    # 結果を順番に取得
-    for future in as_completed(future_to_url_e):
-        result = future.result()
-        if result:  # None以外の結果のみ表示
-            print(result)
-
 # 並列処理でH列のURLを処理
-with ThreadPoolExecutor(max_workers=1) as executor:  # 1スレッドで並列処理
-    future_to_url_h = {executor.submit(get_price, url, row, 9): (url, row) for row, url in enumerate(urls_h, start=4)}
+with ThreadPoolExecutor(max_workers=5) as executor:  # 1スレッドで並列処理
+    future_to_url_h = {executor.submit(get_mercari_price, url, row, 6): (url, row) for row, url in enumerate(urls_h, start=4)}
     
     # 結果を順番に取得
     for future in as_completed(future_to_url_h):
