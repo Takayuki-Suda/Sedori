@@ -44,7 +44,7 @@ all_data = worksheet.get_all_values()  # スプレッドシート全体を取得
 urls_h = [row[4] for row in all_data[3:]]  # E列（4列目）のURL
 
 # メルカリの金額を取得する関数
-def get_mercari_price(url, row, column):
+def get_mercari_price(url, row):
     try:
         # 対象のURLにアクセス
         driver.get(url)
@@ -76,24 +76,25 @@ def get_mercari_price(url, row, column):
         # 価格情報の要素を取得
         first_price = int(price_element.text.replace('¥', '').replace(',', ''))
 
-        # スプレッドシートに金額を入力
-        worksheet.update_cell(row, column, first_price)
-
-        return None  # 成功時は何も返さない
+        return row, first_price  # 取得したデータを返す
 
     except Exception as e:
-        return f"エラーが発生しました (URL: {url}): {str(e)}"
+        return row, f"エラー: {str(e)}"  # エラー情報を返す
 
 
 # 並列処理でH列のURLを処理
+results = []  # 取得したデータを格納するリスト
 with ThreadPoolExecutor(max_workers=40) as executor:  # スレッド数を最大40に設定
-    future_to_url_h = {executor.submit(get_mercari_price, url, row, 6): (url, row) for row, url in enumerate(urls_h, start=4)}
+    future_to_url_h = {executor.submit(get_mercari_price, url, row): (url, row) for row, url in enumerate(urls_h, start=4)}
 
     # 結果を順番に取得
     for future in as_completed(future_to_url_h):
         result = future.result()
-        if result:  # None以外の結果のみ表示
-            print(result)
+        results.append(result)
+
+# 取得した金額データをスプレッドシートに一括で書き込む
+for row, value in results:
+    worksheet.update_cell(row, 6, value)
 
 # 全ての金額入力が完了したメッセージを表示
 print("金額の入力が完了しました。")
