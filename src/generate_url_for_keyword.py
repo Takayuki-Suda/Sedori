@@ -3,7 +3,7 @@ from spreadsheet_utils import open_worksheet  # 外部ファイルから関数�
 
 def update_shopping_urls_optimized(column_index=4, start_row=4, platforms=None):
     """
-    D列のキーワードに基づいて、複数のECサイト（Amazon, メルカリ, 楽天, Yahoo!ショッピング）のURLを一度に更新する関数
+    D列のキーワードに基づいて、複数のECサイト（Amazon, メルカリ, 楽天, Yahoo!ショッピング, eBay）のURLを一度に更新する関数
     
     Args:
         column_index (int): キーワードが入っている列番号 (デフォルト: 4 = D列)
@@ -12,14 +12,15 @@ def update_shopping_urls_optimized(column_index=4, start_row=4, platforms=None):
     """
     # プラットフォームが指定されていない場合は全てのプラットフォームを使用
     if platforms is None:
-        platforms = [ "mercari","amazon", "rakuten", "yahoo"]
+        platforms = [ "mercari", "amazon", "rakuten", "yahoo", "ebay"]
     
     # プラットフォームと対応する列のマッピング
     platform_columns = { 
         "mercari": 5,  # E列
         "amazon": 8,   # H列
         "rakuten": 11, # K列
-        "yahoo": 14    # N列
+        "yahoo": 14,   # N列
+        "ebay": 17     # Q列 (eBayのURLを追加)
     }
     
     # スプレッドシートを開く
@@ -61,7 +62,9 @@ def update_shopping_urls_optimized(column_index=4, start_row=4, platforms=None):
             elif platform == "yahoo":
                 encoded_keywords = urllib.parse.quote_plus(keyword.replace(",", " "))
                 shopping_url = f"https://shopping.yahoo.co.jp/search?p={encoded_keywords}&tab_ex=commerce&area=13&X=2&sc_i=shopping-pc-web-result-item-sort_mdl-sortitem"
-            
+            elif platform == "ebay":
+                shopping_url = f"https://www.ebay.com/sch/i.html?_nkw={urllib.parse.quote(keyword)}&_ipg=240&_sop=15"  # eBayのURL生成
+                
             url_updates.append([shopping_url])  # Google Sheetsに渡すためリストのリストとして追加
         
         # 一括で更新
@@ -79,4 +82,4 @@ def update_shopping_urls_optimized(column_index=4, start_row=4, platforms=None):
 update_shopping_urls_optimized()
 
 # 特定のプラットフォームのみ更新
-# update_shopping_urls_optimized(platforms=["amazon", "yahoo"])
+# update_shopping_urls_optimized(platforms=["amazon", "yahoo", "ebay"])
